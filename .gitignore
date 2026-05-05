@@ -1,0 +1,29 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Local app data (web mode)
+data.json
+data.bak.json
+backups/
+
+# Rust / Tauri build
+src-tauri/target/
+src-tauri/gen/schemas/
+src-tauri/Cargo.lock
+
+# Build artefacts
+dist/
+*.dmg
+*.app
+*.msi
+*.AppImage

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>sticky — calendar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <button class="mark-btn" id="record-btn" title="now listening…" aria-label="record what you're listening to">
+      <svg class="mark record" viewBox="0 0 40 40" aria-hidden="true">
+        <circle cx="20" cy="20" r="18" fill="#1a1a1a" stroke="#2b2b2b" stroke-width="1.2"/>
+        <circle cx="20" cy="20" r="15" fill="none" stroke="rgba(255,255,255,0.09)" stroke-width="0.4"/>
+        <circle cx="20" cy="20" r="12" fill="none" stroke="rgba(255,255,255,0.09)" stroke-width="0.4"/>
+        <circle cx="20" cy="20" r="9" fill="none" stroke="rgba(255,255,255,0.09)" stroke-width="0.4"/>
+        <circle cx="20" cy="20" r="6" fill="#D97757"/>
+        <line x1="20" y1="14.5" x2="20" y2="16" stroke="rgba(0,0,0,0.45)" stroke-width="0.6" stroke-linecap="round"/>
+        <circle cx="20" cy="20" r="1" fill="#1a1a1a"/>
+        <path d="M 8 13 A 14 14 0 0 1 18 7" stroke="rgba(255,255,255,0.2)" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <h1>sticky</h1>
+    <span class="sub">calendar</span>
+  </div>
+  <nav class="nav">
+    <a class="nav-link" href="/">board</a>
+    <a class="nav-link active" href="/calendar.html">calendar</a>
+  </nav>
+  <div class="hint">click a square to peek · arrows to change month</div>
+</header>
+
+<main class="cal-wrap">
+  <div class="cal-head">
+    <button class="icon-btn" id="prev-month" title="previous">←</button>
+    <h2 id="month-label">…</h2>
+    <button class="icon-btn" id="next-month" title="next">→</button>
+    <button class="icon-btn" id="today-btn" title="today">today</button>
+    <span class="cal-summary" id="cal-summary"></span>
+  </div>
+
+  <div class="cal-dow">
+    <span>sun</span><span>mon</span><span>tue</span><span>wed</span><span>thu</span><span>fri</span><span>sat</span>
+  </div>
+
+  <div class="cal-grid" id="cal-grid"></div>
+</main>
+
+<div id="popover" class="popover hidden" role="dialog"></div>
+<div id="listen-popover" class="popover listen-pop hidden" role="dialog"></div>
+
+<script src="/storage.js"></script>
+<script src="/listen.js"></script>
+<script src="/calendar.js"></script>
+</body>
+</html>

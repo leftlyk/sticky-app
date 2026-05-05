@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>sticky — kanban</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <button class="mark-btn" id="record-btn" title="now listening…" aria-label="record what you're listening to">
+      <svg class="mark record" viewBox="0 0 40 40" aria-hidden="true">
+        <circle cx="20" cy="20" r="18" fill="#1a1a1a" stroke="#2b2b2b" stroke-width="1.2"/>
+        <circle cx="20" cy="20" r="15" fill="none" stroke="rgba(255,255,255,0.09)" stroke-width="0.4"/>
+        <circle cx="20" cy="20" r="12" fill="none" stroke="rgba(255,255,255,0.09)" stroke-width="0.4"/>
+        <circle cx="20" cy="20" r="9" fill="none" stroke="rgba(255,255,255,0.09)" stroke-width="0.4"/>
+        <circle cx="20" cy="20" r="6" fill="#D97757"/>
+        <line x1="20" y1="14.5" x2="20" y2="16" stroke="rgba(0,0,0,0.45)" stroke-width="0.6" stroke-linecap="round"/>
+        <circle cx="20" cy="20" r="1" fill="#1a1a1a"/>
+        <path d="M 8 13 A 14 14 0 0 1 18 7" stroke="rgba(255,255,255,0.2)" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <h1>sticky</h1>
+    <span class="sub">a small kanban</span>
+  </div>
+  <nav class="nav">
+    <a class="nav-link active" href="/">board</a>
+    <a class="nav-link" href="/calendar.html">calendar</a>
+  </nav>
+  <div class="hint">double-click a panel · drag notes between panels · <kbd>⏎</kbd> to save</div>
+</header>
+
+<main id="board" class="board">
+  <section class="column" data-status="todo">
+    <div class="col-head">
+      <h2>going to do <span class="count" data-count="todo"></span></h2>
+      <button class="add-btn" data-add="todo" title="add note">＋</button>
+    </div>
+    <div class="col-body" data-drop="todo"></div>
+  </section>
+
+  <section class="column" data-status="doing">
+    <div class="col-head">
+      <h2>doing <span class="count" data-count="doing"></span></h2>
+      <button class="add-btn" data-add="doing" title="add note">＋</button>
+    </div>
+    <div class="col-body" data-drop="doing"></div>
+  </section>
+
+  <section class="column" data-status="done">
+    <div class="col-head">
+      <h2>done <span class="count" data-count="done"></span></h2>
+      <div class="col-actions">
+        <button class="icon-btn" id="view-archive" title="visit archive">👁</button>
+        <button class="icon-btn" id="archive-done" title="archive all done">📦</button>
+        <button class="add-btn" data-add="done" title="add note">＋</button>
+      </div>
+    </div>
+    <div class="col-body" data-drop="done"></div>
+  </section>
+</main>
+
+<template id="note-tpl">
+  <div class="note" draggable="true">
+    <div class="note-body" contenteditable="true" spellcheck="true"></div>
+    <div class="note-meta">
+      <button class="chip cat-chip" title="category"></button>
+      <button class="chip eff-chip" title="effort"></button>
+      <span class="timer" title="time elapsed">⏱ 0m</span>
+      <button class="del" title="delete">✕</button>
+    </div>
+    <div class="tape"></div>
+  </div>
+</template>
+
+<div id="popover" class="popover hidden" role="dialog"></div>
+<div id="listen-popover" class="popover listen-pop hidden" role="dialog"></div>
+
+<script src="/storage.js"></script>
+<script src="/listen.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>

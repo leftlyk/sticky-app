@@ -1,0 +1,10 @@
+{
+  "name": "sticky",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "web": "node server.js",
+    "tauri:dev": "cargo tauri dev",
+    "tauri:build": "cargo tauri build"
+  }
+}
