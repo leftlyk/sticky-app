@@ -11,17 +11,37 @@
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   }
 
-  async function loadJson() {
-    const s = await invoke('load_data');
-    const d = JSON.parse(s);
-    if (!d.notes) d.notes = [];
-    if (!d.categories) d.categories = ['work', 'life', 'idea'];
-    if (!d.listening) d.listening = [];
-    return d;
+  let dataPromise = null;
+  function getData() {
+    if (!dataPromise) {
+      dataPromise = invoke('load_data').then(s => {
+        const d = JSON.parse(s);
+        if (!d.notes) d.notes = [];
+        if (!d.categories) d.categories = ['work', 'life', 'idea'];
+        if (!d.listening) d.listening = [];
+        return d;
+      });
+    }
+    return dataPromise;
   }
 
-  async function saveJson(data) {
-    await invoke('save_data', { json: JSON.stringify(data, null, 2) });
+  let saving = false;
+  let pendingSave = false;
+  function scheduleSave(data) {
+    if (saving) { pendingSave = true; return; }
+    saving = true;
+    (async () => {
+      try {
+        do {
+          pendingSave = false;
+          await invoke('save_data', { json: JSON.stringify(data, null, 2) });
+        } while (pendingSave);
+      } catch (e) {
+        console.error('save failed:', e);
+      } finally {
+        saving = false;
+      }
+    })();
   }
 
   function jsonResponse(obj, status) {
@@ -34,7 +54,7 @@
   async function handle(url, opts) {
     const method = (opts && opts.method) || 'GET';
     const body = opts && opts.body ? JSON.parse(opts.body) : {};
-    const data = await loadJson();
+    const data = await getData();
 
     if (url === '/api/state' && method === 'GET') {
       return jsonResponse(data);
@@ -57,7 +77,7 @@
         order: body.order == null ? now : body.order,
       };
       data.notes.push(note);
-      await saveJson(data);
+      scheduleSave(data);
       return jsonResponse(note);
     }
 
@@ -84,13 +104,13 @@
         for (const k of ['text', 'category', 'effort', 'color', 'rotation', 'order', 'archived']) {
           if (k in body) note[k] = body[k];
         }
-        await saveJson(data);
+        scheduleSave(data);
         return jsonResponse(note);
       }
 
       if (method === 'DELETE') {
         data.notes.splice(idx, 1);
-        await saveJson(data);
+        scheduleSave(data);
         return jsonResponse({ ok: true });
       }
     }
@@ -100,7 +120,7 @@
       if (!text) return jsonResponse({ error: 'empty' }, 400);
       const entry = { id: uid(), text: text, ts: Date.now() };
       data.listening.push(entry);
-      await saveJson(data);
+      scheduleSave(data);
       return jsonResponse(entry);
     }
 
@@ -109,14 +129,14 @@
       for (const note of data.notes) {
         if (note.status === 'done' && !note.archived) { note.archived = true; n++; }
       }
-      await saveJson(data);
+      scheduleSave(data);
       return jsonResponse({ archived: n });
     }
 
     if (url === '/api/categories' && method === 'POST') {
       const name = (body.name || '').trim().toLowerCase();
       if (name && data.categories.indexOf(name) === -1) data.categories.push(name);
-      await saveJson(data);
+      scheduleSave(data);
       return jsonResponse(data.categories);
     }
 

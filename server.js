@@ -1,12 +1,14 @@
 const http = require('http');
 const fs = require('fs');
+const fsp = require('fs').promises;
 const path = require('path');
 
 const PORT = 5174;
 const DATA_FILE = path.join(__dirname, 'data.json');
+const TMP_FILE = DATA_FILE + '.tmp';
 const PUBLIC_DIR = path.join(__dirname, 'public');
 
-function loadData() {
+function loadDataFromDisk() {
   try {
     const d = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
     if (!d.listening) d.listening = [];
@@ -16,8 +18,24 @@ function loadData() {
   }
 }
 
-function saveData(data) {
-  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+const data = loadDataFromDisk();
+
+let saving = false;
+let pending = false;
+async function saveData() {
+  if (saving) { pending = true; return; }
+  saving = true;
+  try {
+    do {
+      pending = false;
+      await fsp.writeFile(TMP_FILE, JSON.stringify(data, null, 2));
+      await fsp.rename(TMP_FILE, DATA_FILE);
+    } while (pending);
+  } catch (e) {
+    console.error('save failed:', e);
+  } finally {
+    saving = false;
+  }
 }
 
 const MIME = {
@@ -67,8 +85,6 @@ const server = http.createServer(async (req, res) => {
 
   if (!url.startsWith('/api/')) return serveStatic(req, res);
 
-  const data = loadData();
-
   try {
     if (url === '/api/state' && req.method === 'GET') {
       return json(res, 200, data);
@@ -92,7 +108,7 @@ const server = http.createServer(async (req, res) => {
         order: body.order ?? now,
       };
       data.notes.push(note);
-      saveData(data);
+      saveData();
       return json(res, 200, note);
     }
 
@@ -122,13 +138,13 @@ const server = http.createServer(async (req, res) => {
         for (const k of ['text', 'category', 'effort', 'color', 'rotation', 'order', 'archived']) {
           if (k in body) note[k] = body[k];
         }
-        saveData(data);
+        saveData();
         return json(res, 200, note);
       }
 
       if (req.method === 'DELETE') {
         data.notes.splice(idx, 1);
-        saveData(data);
+        saveData();
         return json(res, 200, { ok: true });
       }
     }
@@ -139,7 +155,7 @@ const server = http.createServer(async (req, res) => {
       if (!text) return json(res, 400, { error: 'empty' });
       const entry = { id: uid(), text, ts: Date.now() };
       data.listening.push(entry);
-      saveData(data);
+      saveData();
       return json(res, 200, entry);
     }
 
@@ -148,7 +164,7 @@ const server = http.createServer(async (req, res) => {
       for (const note of data.notes) {
         if (note.status === 'done' && !note.archived) { note.archived = true; n++; }
       }
-      saveData(data);
+      saveData();
       return json(res, 200, { archived: n });
     }
 
@@ -157,7 +173,7 @@ const server = http.createServer(async (req, res) => {
       const name = (body.name || '').trim().toLowerCase();
       if (name && !data.categories.includes(name)) {
         data.categories.push(name);
-        saveData(data);
+        saveData();
       }
       return json(res, 200, data.categories);
     }

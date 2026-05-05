@@ -25,6 +25,12 @@ html, body {
   color: var(--ink);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+input, textarea, [contenteditable="true"] {
+  user-select: text;
+  -webkit-user-select: text;
 }
 body {
   display: flex;
@@ -370,6 +376,7 @@ body::before {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  contain: layout paint;
 }
 
 .col-body { scrollbar-width: none; -ms-overflow-style: none; }
@@ -382,22 +389,36 @@ body::before {
   min-height: 110px;
   border-radius: 2px 12px 3px 10px;
   box-shadow:
-    2px 3px 0 rgba(43,43,43,.9),
-    5px 8px 14px rgba(43,43,43,.18);
+    2px 2px 0 rgba(43,43,43,.85),
+    4px 6px 10px rgba(43,43,43,.14);
   cursor: grab;
-  transition: transform 160ms ease, box-shadow 160ms ease;
-  will-change: transform;
+  transform: rotate(var(--rot, 0deg));
+  transition: transform 140ms cubic-bezier(.2,.8,.2,1), box-shadow 140ms ease;
   font-family: 'Caveat', cursive;
   color: var(--ink);
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: element;
+  contain: layout style;
+}
+.note-body {
+  user-select: text;
+  -webkit-user-select: text;
 }
 .note:hover {
-  transform: rotate(var(--rot, 0deg)) translateY(-2px) scale(1.015) !important;
   box-shadow:
-    3px 4px 0 rgba(43,43,43,.9),
-    7px 12px 20px rgba(43,43,43,.22);
+    2px 2px 0 rgba(43,43,43,.85),
+    6px 10px 14px rgba(43,43,43,.18);
 }
 .note:active { cursor: grabbing; }
-.note.dragging { opacity: 0.35; }
+.note.dragging {
+  cursor: grabbing;
+  transition: none;
+}
+
+.note-placeholder {
+  visibility: hidden;
+}
 
 .note.ghost-in {
   animation: pop 260ms cubic-bezier(.2, 1.6, .4, 1);

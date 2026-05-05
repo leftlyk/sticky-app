@@ -3,6 +3,8 @@ const EFFORTS = ['XS', 'S', 'M', 'L', 'XL'];
 
 const state = { notes: [], categories: [], showArchive: false };
 const els = { board: document.getElementById('board'), popover: document.getElementById('popover'), tpl: document.getElementById('note-tpl') };
+const timerEls = new Map();
+const tapeRot = new Map();
 
 function api(url, opts = {}) {
   return fetch(url, {
@@ -38,6 +40,36 @@ function noteElapsedMs(n) {
   return ms;
 }
 
+// FLIP helper: captures positions of every note, runs the mutation, then
+// animates siblings from their old position to their new one. The dragged
+// note is skipped — user already released it where they want it.
+function flipMove(mutate, skipEl) {
+  const notes = [...document.querySelectorAll('.note')];
+  const before = new Map();
+  for (const el of notes) before.set(el, el.getBoundingClientRect());
+  mutate();
+  for (const el of notes) {
+    if (el === skipEl) continue;
+    if (!el.isConnected) continue;
+    const a = before.get(el);
+    const b = el.getBoundingClientRect();
+    const dx = a.left - b.left;
+    const dy = a.top - b.top;
+    if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) continue;
+    const rot = el.style.getPropertyValue('--rot') || '0deg';
+    el.style.transition = 'none';
+    el.style.transform = `translate(${dx}px, ${dy}px) rotate(${rot})`;
+  }
+  requestAnimationFrame(() => {
+    for (const el of notes) {
+      if (el === skipEl) continue;
+      if (!el.isConnected) continue;
+      el.style.transition = '';
+      el.style.transform = '';
+    }
+  });
+}
+
 function visibleNotes() {
   return state.notes.filter(n => {
     if (!n.archived) return true;
@@ -67,6 +99,7 @@ function renderArchiveBanner() {
 }
 
 function render() {
+  timerEls.clear();
   for (const col of document.querySelectorAll('.col-body')) col.innerHTML = '';
   const sorted = [...visibleNotes()].sort((a, b) => (a.order || 0) - (b.order || 0));
   for (const n of sorted) {
@@ -82,8 +115,8 @@ function buildNote(n) {
   el.dataset.id = n.id;
   el.style.background = `var(${n.color || '--p-yellow'})`;
   el.style.setProperty('--rot', `${n.rotation || 0}deg`);
-  el.style.transform = `rotate(${n.rotation || 0}deg)`;
-  el.style.setProperty('--tape-rot', `${-3 + (Math.random() * 6 - 3)}deg`);
+  if (!tapeRot.has(n.id)) tapeRot.set(n.id, -3 + (Math.random() * 6 - 3));
+  el.style.setProperty('--tape-rot', `${tapeRot.get(n.id)}deg`);
 
   if (n.status === 'doing') el.classList.add('running');
   if (n.archived) el.classList.add('archived');
@@ -101,6 +134,7 @@ function buildNote(n) {
 
   const timer = el.querySelector('.timer');
   timer.textContent = fmtElapsed(noteElapsedMs(n));
+  timerEls.set(n.id, timer);
 
   bindNote(el, n);
   return el;
@@ -119,7 +153,11 @@ function bindNote(el, n) {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); body.blur(); }
     if (e.key === 'Escape') body.blur();
   });
-  body.addEventListener('mousedown', e => e.stopPropagation());
+  // Suppress focus/selection on initial mousedown so the parent's pointer
+  // drag can take over. We re-focus manually on pointerup if it was a click.
+  body.addEventListener('mousedown', e => {
+    if (document.activeElement !== body) e.preventDefault();
+  });
 
   el.querySelector('.del').addEventListener('click', async e => {
     e.stopPropagation();
@@ -128,6 +166,8 @@ function bindNote(el, n) {
     el.style.opacity = '0';
     await api(`/api/notes/${n.id}`, { method: 'DELETE' });
     state.notes = state.notes.filter(x => x.id !== n.id);
+    timerEls.delete(n.id);
+    tapeRot.delete(n.id);
     setTimeout(() => { el.remove(); updateCounts(); }, 220);
   });
 
@@ -140,15 +180,229 @@ function bindNote(el, n) {
     openEffortPopover(e.currentTarget, n, el);
   });
 
-  // drag
-  el.addEventListener('dragstart', e => {
-    el.classList.add('dragging');
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', n.id);
-  });
-  el.addEventListener('dragend', () => {
-    el.classList.remove('dragging');
-    document.querySelectorAll('.column.drag-over').forEach(c => c.classList.remove('drag-over'));
+  attachPointerDrag(el, n);
+}
+
+// Pointer-based drag: avoids WKWebView's HTML5 drag-image return animation
+// (the ~100ms snap on drop) and gives us full control of the dragged ghost.
+// Strategy:
+//   1. pointerdown remembers the start point. We don't activate drag until
+//      the pointer moves past a 4px threshold — clicks still work normally.
+//   2. On activation, we create a placeholder div that takes the note's slot
+//      in the flex column, then detach the note to <body> with position:fixed
+//      so we can transform it freely without affecting layout.
+//   3. On pointermove, we translate the note to follow the pointer. We also
+//      hit-test the column under the pointer and reposition the placeholder
+//      with FLIP, so other notes slide rather than pop.
+//   4. On pointerup, we re-insert the note where the placeholder is, then
+//      animate the note from its dragged transform back to identity.
+//   5. PATCH fires after the visual snap so the UI never waits on disk I/O.
+function attachPointerDrag(el, n) {
+  const body = el.querySelector('.note-body');
+
+  el.addEventListener('pointerdown', e => {
+    if (e.button !== 0) return;
+    if (e.target.closest('.chip, .del, button, input')) return;
+
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const onBody = !!e.target.closest('.note-body');
+    const bodyFocused = document.activeElement === body;
+    // If the user is mid-edit, let the browser's native caret/selection
+    // behaviour run; we'll only intercept once the gesture turns into a drag.
+    const allowNativeText = onBody && bodyFocused;
+    let active = false;
+    let placeholder = null;
+    let originRect = null;
+    let scrollParent = null;
+    let scrollAtStart = 0;
+    let currentCol = el.closest('.column');
+    let currentBefore = el.nextElementSibling && el.nextElementSibling.classList?.contains('note') ? el.nextElementSibling : null;
+
+    if (!allowNativeText) e.preventDefault();
+
+    const onMove = ev => {
+      if (!active) {
+        const dx = Math.abs(ev.clientX - startX);
+        const dy = Math.abs(ev.clientY - startY);
+        if (dx < 4 && dy < 4) return;
+        active = true;
+        // If we let native text select start, kill it now that we know this
+        // is a drag gesture instead of a text selection.
+        if (allowNativeText) {
+          body.blur();
+          window.getSelection()?.removeAllRanges();
+        }
+        startDrag();
+      }
+      doDrag(ev);
+    };
+
+    const cleanup = () => {
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      document.removeEventListener('pointercancel', onCancel);
+    };
+
+    const onUp = ev => {
+      cleanup();
+      if (active) {
+        finishDrag(ev);
+      } else if (onBody && document.activeElement !== body) {
+        body.focus();
+        const range = document.caretRangeFromPoint?.(ev.clientX, ev.clientY);
+        if (range) {
+          const sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+      }
+    };
+
+    const onCancel = () => {
+      cleanup();
+      if (active) snapBack();
+    };
+
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+    document.addEventListener('pointercancel', onCancel);
+
+    function startDrag() {
+      // kill any in-flight create animation so it doesn't override our transform
+      el.classList.remove('ghost-in');
+
+      originRect = el.getBoundingClientRect();
+      scrollParent = el.closest('.col-body');
+      scrollAtStart = scrollParent ? scrollParent.scrollTop : 0;
+
+      placeholder = document.createElement('div');
+      placeholder.className = 'note-placeholder';
+      placeholder.style.cssText = `width: ${originRect.width}px; height: ${originRect.height}px; flex-shrink: 0;`;
+      el.parentNode.insertBefore(placeholder, el);
+
+      el.classList.add('dragging');
+      el.style.position = 'fixed';
+      el.style.left = `${originRect.left}px`;
+      el.style.top = `${originRect.top}px`;
+      el.style.width = `${originRect.width}px`;
+      el.style.zIndex = '1000';
+      el.style.pointerEvents = 'none';
+      document.body.appendChild(el);
+    }
+
+    function doDrag(ev) {
+      const dx = ev.clientX - startX;
+      const dy = ev.clientY - startY;
+      const rot = el.style.getPropertyValue('--rot') || '0deg';
+      el.style.transform = `translate(${dx}px, ${dy}px) rotate(${rot})`;
+
+      const target = document.elementFromPoint(ev.clientX, ev.clientY);
+      const col = target?.closest('.column');
+
+      // dragover styling
+      for (const c of document.querySelectorAll('.column.drag-over')) {
+        if (c !== col) c.classList.remove('drag-over');
+      }
+
+      if (!col) return;
+      col.classList.add('drag-over');
+      const colBody = col.querySelector('.col-body');
+
+      const siblings = [...colBody.querySelectorAll('.note:not(.dragging)')];
+      let newBefore = null;
+      for (const s of siblings) {
+        const r = s.getBoundingClientRect();
+        if (ev.clientY < r.top + r.height / 2) { newBefore = s; break; }
+      }
+
+      if (col === currentCol && newBefore === currentBefore) return;
+
+      flipMove(() => {
+        if (newBefore) colBody.insertBefore(placeholder, newBefore);
+        else colBody.appendChild(placeholder);
+      }, el);
+
+      currentCol = col;
+      currentBefore = newBefore;
+    }
+
+    function finishDrag(ev) {
+      for (const c of document.querySelectorAll('.column.drag-over')) c.classList.remove('drag-over');
+
+      if (!currentCol || !placeholder?.parentNode) {
+        snapBack();
+        return;
+      }
+
+      const colBody = currentCol.querySelector('.col-body');
+      const status = currentCol.dataset.status;
+
+      // siblings BEFORE the swap, for order math
+      const siblings = [...colBody.querySelectorAll('.note')];
+      const placeholderIdx = siblings.indexOf(placeholder);
+      const beforeNote = siblings[placeholderIdx + 1]?.classList.contains('note') ? siblings[placeholderIdx + 1] : null;
+      const afterNote = placeholderIdx > 0 ? siblings[placeholderIdx - 1] : null;
+      const beforeOrder = beforeNote ? state.notes.find(x => x.id === beforeNote.dataset.id)?.order : null;
+      const afterOrder = afterNote ? state.notes.find(x => x.id === afterNote.dataset.id)?.order : null;
+
+      let newOrder;
+      if (beforeOrder != null && afterOrder != null) newOrder = (beforeOrder + afterOrder) / 2;
+      else if (beforeOrder != null) newOrder = beforeOrder - 1;
+      else if (afterOrder != null) newOrder = afterOrder + 1;
+      else newOrder = Date.now();
+
+      n.order = newOrder;
+      n.status = status;
+
+      // pointer position relative to viewport when the drop happens
+      const ptrLeft = originRect.left + (ev.clientX - startX);
+      const ptrTop = originRect.top + (ev.clientY - startY);
+
+      // re-insert el where the placeholder is and reset positioning
+      placeholder.parentNode.insertBefore(el, placeholder);
+      placeholder.remove();
+      el.style.position = '';
+      el.style.left = '';
+      el.style.top = '';
+      el.style.width = '';
+      el.style.zIndex = '';
+      el.style.pointerEvents = '';
+
+      if (status === 'doing') el.classList.add('running');
+      else el.classList.remove('running');
+
+      // No snap animation — siblings already FLIP-slid into place during the
+      // drag, so the note just lands at its slot. Avoids any post-drop wiggle.
+      el.classList.remove('dragging');
+      el.style.transition = 'none';
+      el.style.transform = '';
+      void el.offsetWidth;
+      el.style.transition = '';
+
+      api(`/api/notes/${n.id}`, { method: 'PATCH', body: { status, order: newOrder } }).then(updated => {
+        Object.assign(n, updated);
+        const t = timerEls.get(n.id);
+        if (t) t.textContent = fmtElapsed(noteElapsedMs(n));
+        updateCounts();
+      });
+    }
+
+    function snapBack() {
+      if (!placeholder) return;
+      placeholder.parentNode?.insertBefore(el, placeholder);
+      placeholder.remove();
+      el.style.position = '';
+      el.style.left = '';
+      el.style.top = '';
+      el.style.width = '';
+      el.style.zIndex = '';
+      el.style.pointerEvents = '';
+      el.style.transition = '';
+      el.style.transform = '';
+      el.classList.remove('dragging');
+      for (const c of document.querySelectorAll('.column.drag-over')) c.classList.remove('drag-over');
+    }
   });
 }
 
@@ -183,6 +437,10 @@ function openCategoryPopover(anchor, n, el) {
   const newRow = document.createElement('div'); newRow.className = 'row';
   const input = document.createElement('input');
   input.placeholder = 'new category…';
+  input.spellcheck = false;
+  input.autocomplete = 'off';
+  input.setAttribute('autocorrect', 'off');
+  input.setAttribute('autocapitalize', 'off');
   input.onkeydown = async e => {
     if (e.key === 'Enter' && input.value.trim()) {
       const cats = await api('/api/categories', { method: 'POST', body: { name: input.value.trim() } });
@@ -251,67 +509,9 @@ function updateChips(el, n) {
   eff.classList.toggle('empty', !n.effort);
 }
 
-// panel drop zones
+// panel double-click to add
 for (const col of document.querySelectorAll('.column')) {
-  const body = col.querySelector('.col-body');
   const status = col.dataset.status;
-
-  col.addEventListener('dragover', e => {
-    e.preventDefault();
-    col.classList.add('drag-over');
-    e.dataTransfer.dropEffect = 'move';
-  });
-  col.addEventListener('dragleave', e => {
-    if (!col.contains(e.relatedTarget)) col.classList.remove('drag-over');
-  });
-  col.addEventListener('drop', async e => {
-    e.preventDefault();
-    col.classList.remove('drag-over');
-    const id = e.dataTransfer.getData('text/plain');
-    if (!id) return;
-    const n = state.notes.find(x => x.id === id);
-    if (!n) return;
-
-    // compute drop position
-    const siblings = [...body.querySelectorAll('.note:not(.dragging)')];
-    const y = e.clientY;
-    let before = null;
-    for (const s of siblings) {
-      const r = s.getBoundingClientRect();
-      if (y < r.top + r.height / 2) { before = s; break; }
-    }
-
-    // update local
-    const prevStatus = n.status;
-    n.status = status;
-
-    // determine new order based on neighbors
-    const beforeOrder = before ? state.notes.find(x => x.id === before.dataset.id)?.order ?? Date.now() : null;
-    const nextIdx = siblings.indexOf(before);
-    const afterEl = nextIdx <= 0 ? siblings[siblings.length - 1] : siblings[nextIdx - 1];
-    const afterOrder = afterEl && afterEl !== before ? state.notes.find(x => x.id === afterEl.dataset.id)?.order ?? 0 : 0;
-
-    let newOrder;
-    if (before && afterEl && afterEl !== before) newOrder = (beforeOrder + afterOrder) / 2;
-    else if (before) newOrder = beforeOrder - 1;
-    else newOrder = Date.now();
-    n.order = newOrder;
-
-    // dom move
-    const el = document.querySelector(`.note[data-id="${id}"]`);
-    if (el) {
-      if (before) body.insertBefore(el, before); else body.appendChild(el);
-      if (status === 'doing') el.classList.add('running'); else el.classList.remove('running');
-    }
-
-    const updated = await api(`/api/notes/${n.id}`, { method: 'PATCH', body: { status, order: newOrder } });
-    Object.assign(n, updated);
-    const freshEl = document.querySelector(`.note[data-id="${n.id}"]`);
-    if (freshEl) freshEl.querySelector('.timer').textContent = fmtElapsed(noteElapsedMs(n));
-    updateCounts();
-  });
-
-  // dbl-click empty area → add
   col.addEventListener('dblclick', e => {
     if (e.target.closest('.note')) return;
     if (e.target.closest('.add-btn')) return;
@@ -358,7 +558,7 @@ async function createNote(status) {
 setInterval(() => {
   for (const n of state.notes) {
     if (n.status !== 'doing') continue;
-    const el = document.querySelector(`.note[data-id="${n.id}"] .timer`);
+    const el = timerEls.get(n.id);
     if (el) el.textContent = fmtElapsed(noteElapsedMs(n));
   }
 }, 1000);

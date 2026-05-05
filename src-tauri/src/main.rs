@@ -36,20 +36,32 @@ fn save_data(app: tauri::AppHandle, json: String) -> Result<(), String> {
     let data_path = dir.join("data.json");
     let bak_path = dir.join("data.bak.json");
 
-    if data_path.exists() {
-        fs::copy(&data_path, &bak_path).map_err(|e| e.to_string())?;
-    }
+    // Capture the previous save's bytes synchronously so the bak write
+    // (in the spawned thread) can't race with the rename below.
+    let prev_bytes = if data_path.exists() {
+        Some(fs::read(&data_path).map_err(|e| e.to_string())?)
+    } else {
+        None
+    };
 
     let tmp_path = dir.join("data.tmp.json");
     fs::write(&tmp_path, json.as_bytes()).map_err(|e| e.to_string())?;
     fs::rename(&tmp_path, &data_path).map_err(|e| e.to_string())?;
+
+    if let Some(bytes) = prev_bytes {
+        std::thread::spawn(move || {
+            let _ = fs::write(&bak_path, &bytes);
+        });
+    }
 
     let backups_dir = dir.join("backups");
     fs::create_dir_all(&backups_dir).map_err(|e| e.to_string())?;
     let today = chrono::Local::now().format("%Y-%m-%d").to_string();
     let snap = backups_dir.join(format!("{}.json", today));
     if !snap.exists() {
-        fs::write(&snap, json.as_bytes()).map_err(|e| e.to_string())?;
+        std::thread::spawn(move || {
+            let _ = fs::write(&snap, json.as_bytes());
+        });
     }
 
     Ok(())

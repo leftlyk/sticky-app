@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <radialGradient id="paper" cx="50%" cy="40%" r="80%">
+      <stop offset="0%" stop-color="#FFF6E0"/>
+      <stop offset="100%" stop-color="#F0EEE6"/>
+    </radialGradient>
+    <radialGradient id="vinyl" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#202020"/>
+      <stop offset="100%" stop-color="#0a0a0a"/>
+    </radialGradient>
+    <filter id="rough" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency="1.2" numOctaves="2" seed="3"/>
+      <feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.06 0"/>
+      <feComposite in2="SourceGraphic" operator="in"/>
+    </filter>
+  </defs>
+
+  <!-- background sticky-note -->
+  <rect x="60" y="60" width="904" height="904" rx="40" ry="40"
+        fill="url(#paper)" stroke="#2b2b2b" stroke-width="10"/>
+
+  <!-- washi tape strip -->
+  <rect x="380" y="40" width="264" height="80" rx="2"
+        fill="#D97757" opacity="0.85"
+        transform="rotate(-3 512 80)"
+        stroke="rgba(255,255,255,0.5)" stroke-width="2" stroke-dasharray="6 4"/>
+
+  <!-- subtle paper noise overlay -->
+  <rect x="60" y="60" width="904" height="904" rx="40" ry="40" filter="url(#rough)" opacity="0.6"/>
+
+  <!-- vinyl record -->
+  <g transform="translate(512 540) rotate(-8)">
+    <circle r="320" fill="url(#vinyl)" stroke="#2b2b2b" stroke-width="10"/>
+    <circle r="290" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="2"/>
+    <circle r="255" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="2"/>
+    <circle r="220" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="2"/>
+    <circle r="185" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="2"/>
+    <circle r="150" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="2"/>
+    <!-- shine arc -->
+    <path d="M -200 -180 A 280 280 0 0 1 -50 -270" stroke="rgba(255,255,255,0.18)" stroke-width="14" fill="none" stroke-linecap="round"/>
+    <!-- centre label -->
+    <circle r="110" fill="#D97757" stroke="#2b2b2b" stroke-width="4"/>
+    <circle r="100" fill="none" stroke="rgba(0,0,0,0.18)" stroke-width="1.5"/>
+    <!-- label tick -->
+    <line x1="0" y1="-95" x2="0" y2="-78" stroke="rgba(0,0,0,0.5)" stroke-width="6" stroke-linecap="round"/>
+    <!-- spindle hole -->
+    <circle r="14" fill="#0a0a0a"/>
+  </g>
+</svg>

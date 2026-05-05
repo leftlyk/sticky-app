@@ -37,6 +37,10 @@
     const input = document.createElement('input');
     input.className = 'listen-input';
     input.placeholder = 'song · artist · album';
+    input.spellcheck = false;
+    input.autocomplete = 'off';
+    input.setAttribute('autocorrect', 'off');
+    input.setAttribute('autocapitalize', 'off');
     pop.appendChild(input);
 
     const sug = document.createElement('div');
