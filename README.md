@@ -92,6 +92,10 @@ The workflow runs (~15 min for all four platforms) and creates a **draft release
 - **Windows** `.msi` and `.exe` — SmartScreen warns until enough downloads OR you sign with an EV cert.
 - **Linux** `.AppImage` and `.deb` — usually fine, but `chmod +x` may be needed for the AppImage.
 
+tl;dr, install, run:
+```sudo xattr -rd com.apple.quarantine /Applications/sticky.app
+  sudo spctl --add /Applications/sticky.app ```
+
 ### Auto-update (optional, later)
 
 Add the [Tauri updater plugin](https://v2.tauri.app/plugin/updater/) and a public/private signing key pair. The workflow then signs each release; the running app polls a `latest.json` URL on GitHub Releases and prompts users to update.
