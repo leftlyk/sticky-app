@@ -68,7 +68,12 @@ jobs:
 
             > The `.tar.gz`, `.sig`, and `latest.json` files are for the in-app auto-updater. You don't need to download them.
 
-            First launch on macOS: right-click the app → Open → Open. One-time Gatekeeper warning (app is unsigned).
+            ### macOS first launch
+            App is unsigned — macOS may say it's "damaged" and offer to move to Bin. **Don't.** Run this once after dragging to /Applications:
+            ```
+            xattr -cr /Applications/sticky.app
+            ```
+            Then open normally. One-time. (Removes the quarantine flag macOS adds to anything downloaded via browser.)
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }} --config '{"bundle":{"createUpdaterArtifacts":true}}'
