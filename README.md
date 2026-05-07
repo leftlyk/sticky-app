@@ -92,9 +92,11 @@ The workflow runs (~15 min for all four platforms) and creates a **draft release
 - **Windows** `.msi` and `.exe` — SmartScreen warns until enough downloads OR you sign with an EV cert.
 - **Linux** `.AppImage` and `.deb` — usually fine, but `chmod +x` may be needed for the AppImage.
 
-tl;dr, install, run:
-```sudo xattr -rd com.apple.quarantine /Applications/sticky.app
-  sudo spctl --add /Applications/sticky.app ```
+f*** apple, to allow on mac: 
+```
+sudo xattr -rd com.apple.quarantine /Applications/sticky.app
+sudo spctl --add /Applications/sticky.app 
+```
 
 ### Auto-update (optional, later)
 
