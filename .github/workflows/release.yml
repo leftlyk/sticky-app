@@ -55,5 +55,5 @@ jobs:
           releaseBody: 'See the assets below to download.'
           releaseDraft: true
           prerelease: false
-          args: ${{ matrix.args }}
+          args: ${{ matrix.args }} --config '{"bundle":{"createUpdaterArtifacts":true}}'
           updaterJsonPreferNsis: false

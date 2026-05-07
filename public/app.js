@@ -150,8 +150,17 @@ function bindNote(el, n) {
     api(`/api/notes/${n.id}`, { method: 'PATCH', body: { text } });
   });
   body.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); body.blur(); }
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      body.blur();
+    }
     if (e.key === 'Escape') body.blur();
+  });
+  // Strip formatting on paste — sticky notes only hold plain text.
+  body.addEventListener('paste', e => {
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData)?.getData('text/plain') ?? '';
+    document.execCommand('insertText', false, text);
   });
   // Suppress focus/selection on initial mousedown so the parent's pointer
   // drag can take over. We re-focus manually on pointerup if it was a click.
