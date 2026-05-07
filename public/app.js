@@ -107,7 +107,24 @@ function render() {
     if (container) container.appendChild(buildNote(n));
   }
   renderArchiveBanner();
+  renderVersionMarker();
   updateCounts();
+}
+
+let cachedVersion = null;
+async function renderVersionMarker() {
+  const done = document.querySelector('.col-body[data-drop="done"]');
+  if (!done) return;
+  if (cachedVersion === null) {
+    try {
+      cachedVersion = window.__TAURI__?.app?.getVersion ? await window.__TAURI__.app.getVersion() : '';
+    } catch { cachedVersion = ''; }
+  }
+  if (!cachedVersion) return;
+  const marker = document.createElement('div');
+  marker.className = 'version-marker';
+  marker.textContent = `v${cachedVersion}`;
+  done.appendChild(marker);
 }
 
 function buildNote(n) {

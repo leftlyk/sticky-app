@@ -423,6 +423,20 @@ body::before {
   visibility: hidden;
 }
 
+.version-marker {
+  align-self: center;
+  margin-top: 14px;
+  font-family: 'Caveat', cursive;
+  font-size: 13px;
+  color: rgba(43,43,43,0.32);
+  letter-spacing: 0.5px;
+  font-style: italic;
+  user-select: none;
+  -webkit-user-select: none;
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
 .note.ghost-in {
   animation: pop 260ms cubic-bezier(.2, 1.6, .4, 1);
 }

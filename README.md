@@ -115,3 +115,12 @@ sticky-app/
     ├── icons/                      ← generate with `cargo tauri icon`
     └── src/main.rs
 ```
+
+## Bumping version for release
+```
+  NEW={new_ver}                                                                                                                                                                            
+  sed -i '' "s/\"version\": \"[^\"]*\"/\"version\": \"$NEW\"/" package.json src-tauri/tauri.conf.json                                                                                                        
+  sed -i '' "s/^version = \".*\"/version = \"$NEW\"/" src-tauri/Cargo.toml                                                                                                                                   
+  git add -A && git commit -m "release v$NEW: {update msg}"                                                                                                                                             
+  git tag v$NEW && git push origin main && git push origin v$NEW  
+```
