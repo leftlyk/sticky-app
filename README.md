@@ -123,4 +123,6 @@ sticky-app/
   sed -i '' "s/^version = \".*\"/version = \"$NEW\"/" src-tauri/Cargo.toml                                                                                                                                   
   git add -A && git commit -m "release v$NEW: {update msg}"                                                                                                                                             
   git tag v$NEW && git push origin main && git push origin v$NEW  
+
+  gh release edit v{new_ver} --draft=false --repo leftlyk/sticky-app
 ```

@@ -52,7 +52,23 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: 'sticky ${{ github.ref_name }}'
-          releaseBody: 'See the assets below to download.'
+          releaseBody: |
+            ## Download
+
+            ### macOS
+            - **Apple Silicon (M1/M2/M3+)** — `sticky_*_aarch64.dmg`
+            - **Intel** — `sticky_*_x64.dmg`
+
+            ### Windows
+            - `sticky_*_x64-setup.exe`
+
+            ### Linux
+            - **AppImage** (any distro) — `sticky_*_amd64.AppImage`
+            - **Debian/Ubuntu** — `sticky_*_amd64.deb`
+
+            > The `.tar.gz`, `.sig`, and `latest.json` files are for the in-app auto-updater. You don't need to download them.
+
+            First launch on macOS: right-click the app → Open → Open. One-time Gatekeeper warning (app is unsigned).
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }} --config '{"bundle":{"createUpdaterArtifacts":true}}'
