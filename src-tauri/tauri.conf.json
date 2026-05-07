@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "sticky",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "identifier": "com.kayden.sticky",
   "build": {
     "frontendDist": "../public"
@@ -41,7 +41,7 @@
       "endpoints": [
         "https://github.com/leftlyk/sticky-app/releases/latest/download/latest.json"
       ],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDlGNDRDRTQ4OTU2QzdERTAKUldUZ2ZXeVZTTTVFbitlTTk2RTFUVWVoTmJNUGNMVk12dmVLeXNjWGdER0R4bHhxbVlVN0UxZm0K"
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEZGRTZBMTE5N0ExOTQ2MUQKUldRZFJobDZHYUhtLy92RURscG1jSm1FOU1ITXpISlpnL0JoQSs5dVFJL2RiejZxYmV5ZFdBWmEK"
     }
   }
 }
