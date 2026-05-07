@@ -167,10 +167,6 @@ function bindNote(el, n) {
     api(`/api/notes/${n.id}`, { method: 'PATCH', body: { text } });
   });
   body.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-      e.preventDefault();
-      body.blur();
-    }
     if (e.key === 'Escape') body.blur();
   });
   // Strip formatting on paste — sticky notes only hold plain text.
@@ -240,8 +236,6 @@ function attachPointerDrag(el, n) {
     let active = false;
     let placeholder = null;
     let originRect = null;
-    let scrollParent = null;
-    let scrollAtStart = 0;
     let currentCol = el.closest('.column');
     let currentBefore = el.nextElementSibling && el.nextElementSibling.classList?.contains('note') ? el.nextElementSibling : null;
 
@@ -273,7 +267,7 @@ function attachPointerDrag(el, n) {
     const onUp = ev => {
       cleanup();
       if (active) {
-        finishDrag(ev);
+        finishDrag();
       } else if (onBody && document.activeElement !== body) {
         body.focus();
         const range = document.caretRangeFromPoint?.(ev.clientX, ev.clientY);
@@ -299,8 +293,6 @@ function attachPointerDrag(el, n) {
       el.classList.remove('ghost-in');
 
       originRect = el.getBoundingClientRect();
-      scrollParent = el.closest('.col-body');
-      scrollAtStart = scrollParent ? scrollParent.scrollTop : 0;
 
       placeholder = document.createElement('div');
       placeholder.className = 'note-placeholder';
@@ -353,7 +345,7 @@ function attachPointerDrag(el, n) {
       currentBefore = newBefore;
     }
 
-    function finishDrag(ev) {
+    function finishDrag() {
       for (const c of document.querySelectorAll('.column.drag-over')) c.classList.remove('drag-over');
 
       if (!currentCol || !placeholder?.parentNode) {
@@ -380,10 +372,6 @@ function attachPointerDrag(el, n) {
 
       n.order = newOrder;
       n.status = status;
-
-      // pointer position relative to viewport when the drop happens
-      const ptrLeft = originRect.left + (ev.clientX - startX);
-      const ptrTop = originRect.top + (ev.clientY - startY);
 
       // re-insert el where the placeholder is and reset positioning
       placeholder.parentNode.insertBefore(el, placeholder);
