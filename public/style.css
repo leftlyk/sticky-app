@@ -437,6 +437,42 @@ body::before {
   flex-shrink: 0;
 }
 
+#update-banner {
+  position: fixed;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--ink);
+  color: var(--bg);
+  padding: 8px 14px;
+  border-radius: 6px;
+  box-shadow: 2px 4px 0 rgba(0,0,0,.3), 6px 12px 24px rgba(0,0,0,.25);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+#update-banner .ub-msg b { color: var(--accent); }
+#update-banner .ub-btn {
+  border: 1px solid rgba(255,255,255,.4);
+  background: transparent;
+  color: var(--bg);
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+}
+#update-banner .ub-btn:hover { background: rgba(255,255,255,.1); }
+#update-banner .ub-btn:disabled { opacity: 0.4; cursor: default; }
+#update-banner .ub-go { background: var(--accent); border-color: var(--accent); color: #fff; }
+#update-banner .ub-go:hover { background: #c46545; }
+#update-banner .ub-status { font-size: 12px; opacity: 0.7; }
+
 .note.ghost-in {
   animation: pop 260ms cubic-bezier(.2, 1.6, .4, 1);
 }

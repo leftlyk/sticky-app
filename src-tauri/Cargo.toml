@@ -1,6 +1,6 @@
 [package]
 name = "sticky"
-version = "1.0.1"
+version = "1.0.3"
 description = "sticky kanban + calendar"
 edition = "2021"
 
